@@ -231,25 +231,47 @@ class DataPrepper:
                                                 self.ltr_store_name,
                                                 size=len(query_doc_ids), terms_field=terms_field)
         ##### Step Extract LTR Logged Features:
-        # IMPLEMENT_START --
-        print("IMPLEMENT ME: __log_ltr_query_features: Extract log features out of the LTR:EXT response and place in a data frame")
-        # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  Also capture and return all query/doc pairs that didn't return features
-        # Your structure should look like the data frame below
-        feature_results = {}
-        feature_results["doc_id"] = []  # capture the doc id so we can join later
-        feature_results["query_id"] = []  # ^^^
-        feature_results["sku"] = []
-        feature_results["name_match"] = []
-        rng = np.random.default_rng(12345)
-        for doc_id in query_doc_ids:
-            feature_results["doc_id"].append(doc_id)  # capture the doc id so we can join later
-            feature_results["query_id"].append(query_id)
-            feature_results["sku"].append(doc_id)  
-            feature_results["name_match"].append(rng.random())
-        frame = pd.DataFrame(feature_results)
-        return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64'})
-        # IMPLEMENT_END
+        try:
+            response = self.opensearch.search(body=log_query, index=self.index_name)
+        except RequestError as e:
+            print("Error logging features", e, log_query)
+        else:
+            
+            # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  
+            # Also capture and return all query/doc pairs that didn't return features
+            feature_results = {}
+            feature_results["doc_id"] = []  # capture the doc id so we can join later
+            feature_results["query_id"] = []  # ^^^
+            feature_results["sku"] = []
+            feature_results["name_match"] = []
+            feature_results["name_phrase_match"] = []
+            feature_results["customerReviewCount"] = []
+            feature_results["click_prior"] = []
+            feature_results["customerReviewAverage"] = []
+            feature_results["artistName"] = []
+            feature_results["shortDescription"] = []
+            feature_results["longDescription"] = []
+            feature_results["salesRankShortTerm"] = []
 
+            for hit in response['hits']['hits']:
+                feature_results["doc_id"].append(hit['_id'])  # capture the doc id so we can join later
+                feature_results["query_id"].append(query_id)
+                feature_results["sku"].append(hit["_source"]["sku"][0]) 
+                log_entry = hit["fields"]["_ltrlog"][0]["log_entry"] # add feature values from log entry
+                feature_results["name_match"].append(log_entry[0].get("value"))
+                feature_results["name_phrase_match"].append(log_entry[1].get("value"))
+                feature_results["customerReviewCount"].append(log_entry[2].get("value"))
+                feature_results["click_prior"].append(log_entry[3].get("value"))
+                feature_results["customerReviewAverage"].append(log_entry[4].get("value"))
+                feature_results["artistName"].append(log_entry[5].get("value"))
+                feature_results["shortDescription"].append(log_entry[6].get("value"))
+                feature_results["longDescription"].append(log_entry[7].get("value"))
+                feature_results["salesRankShortTerm"].append(log_entry[6].get("value"))
+                
+            frame = pd.DataFrame(feature_results)
+            return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64'})
+        return None
+        
     # Can try out normalizing data, but for XGb, you really don't have to since it is just finding splits
     def normalize_data(self, ranks_features_df, feature_set, normalize_type_map):
         # we need to get some stats from OpenSearch and then use that to normalize our data

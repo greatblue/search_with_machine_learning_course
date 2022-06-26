@@ -19,7 +19,8 @@ def create_prior_queries_from_group(click_group): # total impressions isn't curr
         for item in click_group.itertuples():
             try:
                 impressions = max(item.clicks / item.num_impressions, 0.001)
-                click_prior_query += "%s^%.3f  " % (item.doc_id, impressions)
+                seen = impressions / len(click_group)
+                click_prior_query += "%s^%.3f  " % (item.doc_id, seen)
             except KeyError as ke:
                 pass # nothing to do in this case, it just means we can't find priors for this doc
     return click_prior_query
