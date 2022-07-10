@@ -136,3 +136,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .vscode/bookmarks.json
+week3/query_classifier_ph.bin
+week3/query_classifier_ph.vec

@@ -49,7 +49,10 @@ df = pd.read_csv(queries_file_name)[['category', 'query']]
 df = df[df['category'].isin(categories)]
 
 # IMPLEMENT ME: Convert queries to lowercase, and optionally implement other normalization, like stemming.
-
+df['query'] = df['query'].str.lower()
+df['tokens'] = df['query'].str.split()
+df['stemmed_tokens'] = df['tokens'].apply(lambda x: [stemmer.stem(y) for y in x])
+df['query'] = df['stemmed_tokens'].str.join(' ')
 # IMPLEMENT ME: Roll up categories to ancestors to satisfy the minimum number of queries per category.
 
 # Create labels in fastText format.
